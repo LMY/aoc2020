@@ -24,3 +24,4 @@ aoc23
 aoc24
 aoc25
 memleak.log
+*.o
