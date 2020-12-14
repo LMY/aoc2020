@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 #include <vector>
 
 // "aocXY.extension" -> "aocXY.txt"
@@ -51,48 +53,95 @@ auto es1()
   return 0lu;
 }
 
+template<class T>
+T modInverse(T a, T m) 
+{
+  a = a % m;
+  for (T x = 1; x < m; x++)
+    if ((a * x) % m == 1)
+      return x;
+
+  return 0lu;
+} 
+
 auto es2()
 {
+  // http://homepages.math.uic.edu/~leon/mcs425-s08/handouts/chinese_remainder.pdf
   auto lines = readFile<std::string>(PUZZLE_INPUT_FILENAME);
 
+  std::vector<uint64_t> m;  // modules
+  std::vector<uint64_t> a;  // remainders
 
-  std::vector<int> bus;
-
+  // read input
   size_t pos = 0;
+  uint64_t where = 0;
 
   while ((pos = lines[1].find(",")) != std::string::npos)
   {
-      std::string token = lines[1].substr(0, pos);
+    std::string token = lines[1].substr(0, pos);
 
-      bus.push_back(token != "x" ? std::stoi(token) : -1);
+    if (token != "x")
+    {
+      auto bus = (uint64_t)std::stoi(token);
+      m.push_back(bus);
+      // (t+i) mod m[i] = i ->  t mod m[i] = -i  ->   t mod m[i] = m[i] - i ->  a[i] = m[i] - i
+      a.push_back(bus - where);
+    }
 
-      lines[1].erase(0, pos + 1);
+    lines[1].erase(0, pos + 1);
+    where++;
   }
 
-  bus.push_back(lines[1] != "x" ? std::stoi(lines[1]) : -1);
-  // uint64_t init = std::stoi(lines[0]);
-
-  for (uint64_t selected = 0; ; selected++)
+  if (lines[1] != "x")
   {
-    if (selected % 1000 == 0)
-      std::cout << selected << std::endl;
-
-    bool win = true;
-
-    for (uint i=0; i<bus.size(); i++)
-      if (bus[i] >= 0)
-        if ((selected + i) % bus[i] != 0)
-        {
-          win = false;
-          // std::cout << "lost because [" << i << "] " << selected << " % " << bus[i] << " = " << ((selected + i) % bus[i]) << " != " << 0 << std::endl;
-          break;
-        }
-
-    if (win)
-      return selected;
+    auto bus = (uint64_t) std::stoi(lines[1]);
+    m.push_back(bus);
+    a.push_back(bus - where);
   }
 
-  return 0lu;
+  // std::cout << std::endl << "m:" << std::endl;
+  // std::for_each(m.begin(), m.end(), [](uint64_t x) { std::cout << x << std::endl; });
+  // std::cout << std::endl << "a:" << std::endl;
+  // std::for_each(a.begin(), a.end(), [](uint64_t x) { std::cout << x << std::endl; });
+
+  // calculate product M = prod m[i]
+  auto product = std::accumulate(m.begin(), m.end(), 1lu, [](uint64_t x, const uint64_t entry){ return entry * x; });
+  
+  // std::cout << "product is " << product << std::endl;
+
+  // calculate z[i] = product/m[i]
+  std::vector<uint64_t> z;
+  std::for_each(m.begin(), m.end(), [product, &z](uint64_t x) { z.push_back(product/x); });
+
+  // std::cout << std::endl << "z:" << std::endl;
+  // std::for_each(z.begin(), z.end(), [](uint64_t x) { std::cout << x << std::endl; });
+
+  // calculate y[i] = z[i] mod_inverse m[i]
+  std::vector<uint64_t> y(z.size());
+
+  for (uint i=0; i<y.size(); i++)
+    y[i] = modInverse(z[i], m[i]);
+
+  // std::cout << std::endl << "y:" << std::endl;
+  // std::for_each(y.begin(), y.end(), [](uint64_t x) { std::cout << x << std::endl; });
+
+  // calculate w[i] = y[i] * z[i]
+  std::vector<uint64_t> w(z.size());
+  for (uint i=0; i<w.size(); i++)
+    w[i] = y[i] * z[i];
+
+  // std::cout << std::endl << "w:" << std::endl;
+  // std::for_each(w.begin(), w.end(), [](uint64_t x) { std::cout << x << std::endl; });
+  // std::cout << std::endl;
+
+  // calculate x = sum a[i]*w[i]
+  // solutions are all X : X = x + M k, for any uint k
+  uint64_t ret = 0;
+
+  for (uint i=0; i<w.size(); i++)
+    ret += a[i]*w[i];
+
+  return ret % product;
 }
 
 int main()
