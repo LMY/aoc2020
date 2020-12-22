@@ -169,20 +169,8 @@ auto es1()
   return ret;
 }
 
-auto es2()
+auto getCorners(std::vector<tile> tiles)
 {
-const auto lines = readFileLines(PUZZLE_INPUT_FILENAME);
-
-  std::vector<tile> tiles;
-
-  for (uint i=0; i<lines.size(); i++)
-    if (lines[i].empty())
-      tiles[tiles.size()-1].calculateBorder();
-    else if (lines[i].substr(0, 4) == "Tile")
-      tiles.push_back(tile(std::stoi(lines[i].substr(5, lines[i].size()-6))));
-    else
-      tiles[tiles.size()-1].content.push_back(lines[i]);
-
   std::vector<std::vector<bool>> visits(tiles.size());
   for (auto& v : visits)
     v.resize(4);
@@ -218,50 +206,68 @@ const auto lines = readFileLines(PUZZLE_INPUT_FILENAME);
       corners.push_back(tiles[i].name);
   }
 
+  return corners;
+}
+
+auto getTile(std::vector<tile> tiles, uint name)
+{
+  for (auto x : tiles)
+    if (x.name == name)
+      return x;
+
+  return tiles[0];
+}
+
+auto es2()
+{
+  const auto lines = readFileLines(PUZZLE_INPUT_FILENAME);
+
+  // read input
+  std::vector<tile> tiles;
+
+  for (uint i=0; i<lines.size(); i++)
+    if (lines[i].empty())
+      tiles[tiles.size()-1].calculateBorder();
+    else if (lines[i].substr(0, 4) == "Tile")
+      tiles.push_back(tile(std::stoi(lines[i].substr(5, lines[i].size()-6))));
+    else
+      tiles[tiles.size()-1].content.push_back(lines[i]);
+
+  // get corners
+  std::vector<uint> corners = getCorners(tiles);
+
   std::vector<bool> image(100*400);
 
   std::vector<tile> ordered_tiles;
-  ordered_tiles.push_back(tiles[corners[0]]);
+  ordered_tiles.push_back(getTile(tiles, corners[0]));
 
-ordered_tiles[0].flip();
-ordered_tiles[0].rotate();
-ordered_tiles[0].rotate();
-ordered_tiles[0].rotate();
-ordered_tiles[0].rotate();
+ ordered_tiles[0].flip();
+  ordered_tiles[0].rotate();
+  ordered_tiles[0].rotate();
+  ordered_tiles[0].rotate();
+  ordered_tiles[0].rotate();
 
   std::string right = ordered_tiles[ordered_tiles.size()-1].getBorderRight();
 
   std::cout << ordered_tiles[ordered_tiles.size()-1].name << std::endl;
 
-
-
-  for (uint i=1; i<tiles.size(); i++)
+  for (uint i=0; i<tiles.size(); i++)
   {
     bool found = false;
 
-
-    for (int k=0; k<4; k++)
+    for (int k=0; k<8; k++)
       if (tiles[i].getBorderLeft() == right)
       {
         found = true;
         break;
       }
       else
-        tiles[i].rotate();
-
-
-    if (!found)
-    {
-      tiles[i].flip();
-      for (int k=0; k<4; k++)
-        if (tiles[i].getBorderLeft() == right)
-        {
-          found = true;
-          break;
-        }
+      {
+        if (k == 4)
+          tiles[i].flip();
         else
           tiles[i].rotate();
-    }
+      }
     
     if (found)
     {
@@ -274,11 +280,7 @@ ordered_tiles[0].rotate();
       std::cout << "NOT FOUND" << std::endl;
       break;
     }
-
   }
-
-
-
 
   return 0;
 }
