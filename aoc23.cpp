@@ -1,12 +1,8 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <sstream>
-#include <list>
 #include <map>
-#include <numeric>
 #include <vector>
-#include <set>
 
 // "aocXY.extension" -> "aocXY.txt"
 #define PUZZLE_INPUT_FILENAME (std::string(__FILE__).substr(0, std::string(__FILE__).find('.') + 1) + "txt")
@@ -81,118 +77,61 @@ auto es1()
   std::string state = lines[0];
 
   for (int i=0; i<100; i++)
-  {
     state = move(state);
-    // std::cout << state << std::endl;
-  }
 
-  // std::cout << "[" << state << "]" << std::endl;
   state = arrange_to_1(state);
-  // std::cout << "[" << state << "]" << std::endl;
 
   return state;
 }
 
-static inline void move2(std::list<uint> x)
+static inline void move2(std::map<uint, uint>& next, uint& current)
 {
-  const auto len = x.size();
+  const auto len = next.size();
 
-  auto destination = x.front();
-  x.pop_front();
+  auto pu1 = next[current];
+  auto pu2 = next[pu1];
+  auto pu3 = next[pu2];
 
-  auto pu1 = x.front();
-  x.pop_front();
+  next[current] = next[pu3];
 
-  auto pu2 = x.front();
-  x.pop_front();
-
-  auto pu3 = x.front();
-  x.pop_front();
-
-  auto lookfor = destination == 1 ? len : destination -1;
+  auto lookfor = current == 1 ? len : current-1;
 
   while (lookfor == pu1 || lookfor == pu2 || lookfor == pu3)
     lookfor = (lookfor == 1 ? len : lookfor-1);
 
-  // std::cout << destination << " -> look for " << lookfor << std::endl;
+  auto savenext = next[lookfor];
+  next[lookfor] = pu1;
+  next[pu3] = savenext;
 
-  auto where = std::find(x.begin(), x.end(), lookfor);
-
-  where++;
-  x.insert(where, pu1);
-  x.insert(where, pu2);
-  x.insert(where, pu3);
-  x.push_back(destination);
-}
-
-int where_is1(std::vector<uint> state)
-{
-  for (uint i=0; i<state.size(); i++)
-    if (state[i] == 1)
-      return i;
-
-  return -1;
-}
-
-void print_first_tot(std::list<uint> state)
-{
-  for (auto x : state)
-    std::cout << x << " ";
-
-  std::cout << std::endl;
+  current = next[current];
 }
 
 auto es2()
 {
   const auto lines = readFileLines(PUZZLE_INPUT_FILENAME);
+  std::string state = lines[0];
 
-  std::list<uint> state(1000000);
+  std::map<uint, uint> next;
 
-  for (uint i=0; i<lines[0].size(); i++)
-    state.push_back(lines[0][i] - '0');
+  for (uint i=0; i<state.size()-1; i++)
+    next[state[i] - '0'] = state[i+1] - '0';
+
+  next[state[state.size()-1] - '0'] = 10;
 
   for (uint i=10; i<=1000000; i++)
-    state.emplace_back(i);
+    next[i] = i+1;
 
-//  for (int i=0; i< 100; i++)
-  for (int i=0; i< 10000000; i++)
-  {
-    // if (i % 1000 == 0)
-      std::cout << i << std::endl;
-    // std::cout << "one is at " << where_is1(state) << std::endl;
-    // print_first_tot(state);
-    move2(state);
-  }
+  next[1000000] = state[0]-'0';
 
-  // print_first_tot(state);*(++destination_pos)
+  uint current = lines[0][0] - '0';
 
-  auto destination_pos = std::find(state.begin(), state.end(), 1); // - state.begin();
-  auto p1 = *(++destination_pos);
-  auto p2 = *(++destination_pos);
-  std::cout << "P[pos+1] " << p1 << std::endl;
-  std::cout << "P[pos+2] " << p2 << std::endl;
-  // std::cout << "P[pos+2] " << state[(destination_pos+2) % state.size()] << std::endl;
+  for (int i = 0; i < 10000000; i++)
+    move2(next, current);
 
-  // return (uint64_t)state[(destination_pos+1) % state.size()] * state[(destination_pos+2) % state.size()];
+  auto ne1 = (uint64_t)next[1];
+  auto nene1 = (uint64_t)next[ne1];
 
-  return p1*p2;
-
-  // uint destination_pos = 0;
-  
-  // for (uint i=0; i<state.size(); i++)
-  //   if (state[i] == 1)
-  //     {
-  //       destination_pos = i;
-  //       break;
-  //     }
-
-  // //  = std::find(state.begin(), state.end(), 1); // - state.begin();
-
-  // std::cout << "POS " << destination_pos << std::endl;
-  // std::cout << "P[pos+1] " << state[(destination_pos+1) % state.size()] << std::endl;
-  // std::cout << "P[pos+2] " << state[(destination_pos+2) % state.size()] << std::endl;
-
-  // return (uint64_t)state[(destination_pos+1) % state.size()] * state[(destination_pos+2) % state.size()];
+  return ne1*nene1;
 }
 
 int main()
